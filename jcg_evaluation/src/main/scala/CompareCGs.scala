@@ -2,10 +2,15 @@ import java.io.File
 import java.io.FileInputStream
 import java.util
 
-import play.api.libs.json.Json
+import java.nio.file.{Files, Paths}
+import java.nio.charset.StandardCharsets
+
+import play.api.libs.json._
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import java.util.{HashSet ⇒ JHashSet}
+
+import JsonFormats._
 
 /**
  * @author Dominik Helm
@@ -17,6 +22,7 @@ object CompareCGs {
     def main(args: Array[String]): Unit = {
         var cg1Path = ""
         var cg2Path = ""
+        var outputPath = ""
         var appPackages = List.empty[String]
 
         var showMethodPrecisionRecall = false
@@ -38,6 +44,8 @@ object CompareCGs {
             case Array("--input2", cg) ⇒
                 assert(cg2Path.isEmpty, "--input2 is specified multiple times")
                 cg2Path = cg
+            case Array("--output", output) =>
+                outputPath = output
             case Array("--package", pkg) ⇒
                 appPackages ::= pkg
             case Array("--showPrecisionRecall", preRec) ⇒
@@ -136,11 +144,18 @@ object CompareCGs {
         }
 
         if (showBoundaries) {
-            val boundaries1 = extractBoundaries(cg1, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
-            println(boundaries1.mkString(" ##### Boundary Methods - Input 1 #####\n\n\t", "\n\t", "\n\n"))
+            // val boundaries1 = extractBoundaries(cg1, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
+            // println(boundaries1.mkString(" ##### Boundary Methods - Input 1 #####\n\n\t", "\n\t", "\n\n"))
 
-            val boundaries2 = extractBoundaries(cg2, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
-            println(boundaries2.mkString(" ##### Boundary Methods - Input 2 #####\n\n\t", "\n\t", "\n\n"))
+            // val boundaries2 = extractBoundaries(cg2, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
+            // println(boundaries2.mkString(" ##### Boundary Methods - Input 2 #####\n\n\t", "\n\t", "\n\n"))
+            val jsonOutput = extractBoundaries(cg2, commonReachableMethods, inPackage)
+            if (outputPath.nonEmpty)
+                Files.write(Paths.get(s"$outputPath/boundaries.json"), Json.prettyPrint(jsonOutput).getBytes(StandardCharsets.UTF_8))
+            else
+                Files.write(Paths.get(s"boundaries.json"), Json.prettyPrint(jsonOutput).getBytes(StandardCharsets.UTF_8))
+
+
         }
 
         if (showAdditionalCalls) {
@@ -188,30 +203,94 @@ object CompareCGs {
 
     case class MethodBoundary(m: Method, target: String)
 
-    private def extractBoundaries(
-        cg: Map[Method, Set[CallSite]], commonReachableMethods: JHashSet[Method], inPackage: String
-    ): JHashSet[MethodBoundary] = {
-        val boundaries = new JHashSet[MethodBoundary]()
+    // private def extractBoundaries(
+    //     cg: Map[Method, Set[CallSite]],
+    //     commonReachableMethods: JHashSet[Method],
+    //     inPackage: String
+    // ): JHashSet[MethodBoundary] = {
+        
+    //     val boundaries = new JHashSet[MethodBoundary]()
 
-        val itr = commonReachableMethods.iterator()
-        while (itr.hasNext) {
-            val caller = itr.next()
-            if (caller.declaringClass.startsWith(inPackage)) {
-                val callees = cg(caller).flatMap(_.targets)
-                if (callees.iterator.exists(!commonReachableMethods.contains(_))) {
-                    val differences = new StringBuilder("\n\t\t")
-                    callees.iterator.foreach { callee ⇒
-                        if (!commonReachableMethods.contains(callee)) {
-                            differences.append(s"${transitiveHull(callee, cg, commonReachableMethods)}: $callee\n\t\t")
-                        }
+    //     val itr = commonReachableMethods.iterator()
+    //     while (itr.hasNext) {
+    //         val caller = itr.next()
+
+    //         if (caller.declaringClass.startsWith(inPackage)) {
+    //             val differences = new StringBuilder()
+
+    //             cg.get(caller).foreach { callsites =>
+    //                 for (cs <- callsites) {
+    //                     val pcStr = cs.pc.map(_.toString).getOrElse("-1")
+    //                     val lineStr = if (cs.line >= 0) cs.line.toString else "-1"
+
+    //                     for (callee <- cs.targets) {
+    //                         if (!commonReachableMethods.contains(callee)) {
+    //                             if (differences.isEmpty)
+    //                                 differences.append("\n\t\t")
+    //                             differences.append(
+    //                                 s"${transitiveHull(callee, cg, commonReachableMethods)}: $callee : pc=$pcStr : line=$lineStr\n\t\t"
+    //                             )
+    //                         }
+    //                     }
+    //                 }
+    //             }
+
+    //             if (differences.nonEmpty)
+    //                 boundaries.add(MethodBoundary(caller, differences.result()))
+    //         }
+    //     }
+
+    //     boundaries
+    // }
+
+   private def extractBoundaries(
+        cg: Map[Method, Set[CallSite]],
+        commonReachableMethods: JHashSet[Method],
+        inPackage: String
+    ): JsValue = {
+
+        val boundaries = cg.keys
+            // keep only common + in-package methods
+            .filter(m => commonReachableMethods.contains(m) && m.declaringClass.startsWith(inPackage))
+            .flatMap { caller =>
+                val callerJson = JsonMethod(
+                    caller.name,
+                    caller.declaringClass,
+                    caller.returnType,
+                    caller.parameterTypes
+                )
+
+                // keep only call sites that actually have non-common targets
+                val callSites = cg(caller).toSeq.flatMap { cs =>
+                    val targets = cs.targets.toSeq.collect {
+                        case callee if !commonReachableMethods.contains(callee) =>
+                            val (reachable, notCovered) = transitiveHull(callee, cg, commonReachableMethods)
+                            JsonTarget(
+                                JsonMethod(
+                                    callee.name,
+                                    callee.declaringClass,
+                                    callee.returnType,
+                                    callee.parameterTypes
+                                ),
+                                reachable,
+                                notCovered
+                            )
                     }
-                    boundaries.add(MethodBoundary(caller, differences.result()))
-                }
-            }
-        }
 
-        boundaries
+                    // Only include this callsite if it has at least one non-common target
+                    if (targets.nonEmpty) Some(JsonCallSite(cs.line, cs.pc, targets))
+                    else None
+                }
+
+                // Only include this caller if it has any such call sites
+                if (callSites.nonEmpty)
+                    Some(JsonBoundaryMethod(callerJson, callSites))
+                else None
+            }.toSeq
+
+        Json.toJson(JsonOutput(boundaries))
     }
+
 
     private def countAdditionalEdges(
         cg: Map[Method, Set[CallSite]], otherCG: Map[Method, Set[CallSite]], inPackage: String, strict: Boolean
@@ -307,4 +386,8 @@ object CompareCGs {
         }
         (reachableMethods.size, nonCommon.size)
     }
+
+
+
+
 }
