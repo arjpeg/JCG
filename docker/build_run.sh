@@ -1,12 +1,14 @@
 #!/bin/bash
 set -e  # stop if any command fails
 
+PROJECT="axion"
 JCG_IMAGE="jcg_dev"
-COMPARECG_CONTAINER="compare_cg_dev"
-JCG_DIR="/home/mohammad/projects/cgFuzz/JCG"
-SCG_DIR="/home/mohammad/projects/cgFuzz/dev/scg"
-DCG_DIR="/home/mohammad/projects/cgFuzz/dev/dcg"
-BOUND_DIR="/home/mohammad/projects/cgFuzz/dev/boundaries"
+COMPARECG_CONTAINER="${PROJECT}_compare_cg"
+
+JCG_DIR="/home/mohammad/projects/cgFuzz/code/analyses/call_graph/JCG"
+DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/atl_jazzer/5h"
+SCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/staticcg/Doop/context-insensitive"
+BOUND_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/boundaries/in_scg/Doop_context-insensitive_atl_jazzer_5h"
 
 # Get host user and group IDs
 HOST_UID=$(id -u)
@@ -32,7 +34,7 @@ docker run -it --name "$COMPARECG_CONTAINER" \
     cd /home/JCG/JCG && \
     sbt compile && \
     sbt \"; project jcg_evaluation; runMain CompareCGs \
-      --input1 /dcg/cg.json \
+      --input1 /dcg/$PROJECT/Dynamic/Dynamic/cg.json \
       --input2 /scg/cg.zip \
       --output /boundaries \
       --showPrecisionRecall all \
