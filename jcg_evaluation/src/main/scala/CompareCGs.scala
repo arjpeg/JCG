@@ -264,7 +264,8 @@ object CompareCGs {
                 val callSites = cg(caller).toSeq.flatMap { cs =>
                     val targets = cs.targets.toSeq.collect {
                         case callee if !commonReachableMethods.contains(callee) =>
-                            val (reachable, notCovered) = transitiveHull(callee, cg, commonReachableMethods)
+                            val (reachable, notCovered) = (0, 0)
+                            // val (reachable, notCovered) = transitiveHull(callee, cg, commonReachableMethods)
                             JsonTarget(
                                 JsonMethod(
                                     callee.name,
