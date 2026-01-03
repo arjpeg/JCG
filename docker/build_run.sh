@@ -6,9 +6,12 @@ JCG_IMAGE="jcg_dev"
 COMPARECG_CONTAINER="${PROJECT}_compare_cg"
 
 JCG_DIR="/home/mohammad/projects/cgFuzz/code/analyses/call_graph/JCG"
-DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/atl_jazzer/5h"
-SCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/staticcg/Doop/context-insensitive"
-BOUND_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/boundaries/in_scg/Doop_context-insensitive_atl_jazzer_5h"
+# DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/atl_jazzer/5h"
+DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/jazzer/24h"
+# SCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/staticcg/Doop/context-insensitive"
+SCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/staticcg/WALA/0-CFA"
+# BOUND_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/boundaries/in_scg/Doop_context-insensitive_atl_jazzer_5h"
+BOUND_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/boundaries/in_scg/WALA_0-cfa_jazzer_24h"
 
 # Get host user and group IDs
 HOST_UID=$(id -u)
@@ -33,9 +36,10 @@ docker run -it --name "$COMPARECG_CONTAINER" \
   bash -c "
     cd /home/JCG/JCG && \
     sbt compile && \
-    sbt \"; project jcg_evaluation; runMain CompareCGs \
+    sbt -J-Xmx28g \
+     \"; project jcg_evaluation; runMain CompareCGs \
       --input1 /dcg/$PROJECT/Dynamic/Dynamic/cg.json \
-      --input2 /scg/cg.zip \
+      --input2 /scg/cg.json \
       --output /boundaries \
       --showPrecisionRecall all \
       --showBoundaries \

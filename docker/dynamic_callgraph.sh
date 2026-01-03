@@ -6,9 +6,11 @@ JCG_IMAGE="jcg_dev"
 DYCG_CONTAINER="${PROJECT}_dynamic_cg_dev"
 
 JCG_DIR="/home/mohammad/projects/cgFuzz/code/analyses/call_graph/JCG"
-DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/atl_jazzer/5h"
+# DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/atl_jazzer/5h"
+DCG_DIR="/home/mohammad/projects/cgFuzz/data/analyses/call_graph/$PROJECT/dyncg/jazzer/24h"
 REPO_DIR="/home/mohammad/projects/cgFuzz/data/projects/$PROJECT"
-CORPUS_DIR="/home/mohammad/projects/cgFuzz/data/corpus/$PROJECT/atl_jazzer/5h"
+# CORPUS_DIR="/home/mohammad/projects/cgFuzz/data/corpus/$PROJECT/atl_jazzer/5h"
+CORPUS_DIR="/home/mohammad/projects/cgFuzz/data/corpus/$PROJECT/jazzer/24h"
 
 # Get host user and group IDs
 HOST_UID=$(id -u)
