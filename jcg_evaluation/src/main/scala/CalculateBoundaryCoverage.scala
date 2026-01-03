@@ -7,6 +7,9 @@ import java.util.zip.GZIPInputStream
 import play.api.libs.json._
 import scala.collection.mutable
 
+import JsonFormats._
+
+
 /**
  * Calculates boundary coverage by comparing boundary methods with dynamic call graph.
  * 
