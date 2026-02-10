@@ -51,10 +51,12 @@ lazy val jcg_annotation_matcher = project.settings(
 lazy val jcg_wala_testadapter = project.settings(
     commonSettings,
     name := "JCG WALA Test Adapter",
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
-    libraryDependencies += "com.ibm.wala" % "com.ibm.wala.core" % "1.5.7",
-    libraryDependencies += "com.ibm.wala" % "com.ibm.wala.util" % "1.5.7",
-    libraryDependencies += "com.ibm.wala" % "com.ibm.wala.shrike" % "1.5.7",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= Seq(
+        "com.ibm.wala" % "com.ibm.wala.core" % "1.5.7",
+        "com.ibm.wala" % "com.ibm.wala.util" % "1.5.7",
+        "com.ibm.wala" % "com.ibm.wala.shrike" % "1.5.7"
+    ),
     libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
     assembly / aggregate := false,
     publishArtifact := false
