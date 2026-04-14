@@ -249,6 +249,9 @@ object CompareCGs {
         inPackage: String
     ): JsValue = {
 
+        // Cache is created once and shared across all transitiveHull calls
+        val hullCache = mutable.HashMap.empty[Method, (Int, Int)]
+
         val boundaries = cg.keys
             // keep only common + in-package methods
             .filter(m => commonReachableMethods.contains(m) && m.declaringClass.startsWith(inPackage))
@@ -264,8 +267,12 @@ object CompareCGs {
                 val callSites = cg(caller).toSeq.flatMap { cs =>
                     val targets = cs.targets.toSeq.collect {
                         case callee if !commonReachableMethods.contains(callee) =>
-                            val (reachable, notCovered) = (0, 0)
+                            // val (reachable, notCovered) = (0, 0)
                             // val (reachable, notCovered) = transitiveHull(callee, cg, commonReachableMethods)
+                            val (reachable, notCovered) = hullCache.getOrElseUpdate(
+                                callee,
+                                transitiveHull(callee, cg, commonReachableMethods)
+                            )
                             JsonTarget(
                                 JsonMethod(
                                     callee.name,
@@ -360,32 +367,71 @@ object CompareCGs {
         result
     }
 
-    private def transitiveHull(method: Method, cg: Map[Method, Set[CallSite]], commonReachableMethods: JHashSet[Method]): (Int, Int) = {
-        val reachableMethods = new java.util.HashSet[Method]()
-        reachableMethods add method
-        val nonCommon = new java.util.HashSet[Method]()
-        nonCommon add method
+    // private def transitiveHull(method: Method, cg: Map[Method, Set[CallSite]], commonReachableMethods: JHashSet[Method]): (Int, Int) = {
+    //     val reachableMethods = new java.util.HashSet[Method]()
+    //     reachableMethods add method
+    //     val nonCommon = new java.util.HashSet[Method]()
+    //     nonCommon add method
 
-        var worklist: mutable.Queue[Method] = mutable.Queue(method)
+    //     var worklist: mutable.Queue[Method] = mutable.Queue(method)
+
+    //     while (worklist.nonEmpty) {
+    //         val currentMethod = worklist.head
+    //         worklist = worklist.tail
+    //         if (cg.contains(currentMethod)) {
+    //             for {
+    //                 cs ← cg(currentMethod)
+    //                 t ← cs.targets
+    //             } {
+    //                 if (!reachableMethods.contains(t)) {
+    //                     if (!commonReachableMethods.contains(t))
+    //                         nonCommon add t
+    //                     reachableMethods add t
+    //                     worklist enqueue t
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     (reachableMethods.size, nonCommon.size)
+    // }
+
+    private def transitiveHull(
+        method: Method,
+        cg: Map[Method, Set[CallSite]],
+        commonReachableMethods: JHashSet[Method]
+    ): (Int, Int) = {
+        val visited = new java.util.HashSet[Method]()
+        visited.add(method)
+
+        var worklist = mutable.Queue(method)
+        var totalReachable = 0
+        var notCovered = 0
 
         while (worklist.nonEmpty) {
-            val currentMethod = worklist.head
-            worklist = worklist.tail
-            if (cg.contains(currentMethod)) {
-                for {
-                    cs ← cg(currentMethod)
-                    t ← cs.targets
-                } {
-                    if (!reachableMethods.contains(t)) {
-                        if (!commonReachableMethods.contains(t))
-                            nonCommon add t
-                        reachableMethods add t
-                        worklist enqueue t
+            val current = worklist.dequeue()
+            totalReachable += 1
+
+            // Only count as "not covered" if it's not in the static CG
+            val isNotCovered = !commonReachableMethods.contains(current)
+            if (isNotCovered) notCovered += 1
+
+            // Only expand further if this node is itself not covered —
+            // if it IS covered, the static CG already handles what's reachable from it
+            if (isNotCovered) {
+                cg.get(current).foreach { callSites =>
+                    for {
+                        cs <- callSites
+                        t  <- cs.targets
+                        if !visited.contains(t)
+                    } {
+                        visited.add(t)
+                        worklist.enqueue(t)
                     }
                 }
             }
         }
-        (reachableMethods.size, nonCommon.size)
+
+        (totalReachable, notCovered)
     }
 
 
