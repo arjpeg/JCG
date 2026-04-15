@@ -27,11 +27,31 @@ case class JsonBoundaryMethod(
 
 case class JsonOutput(boundary_methods: Seq[JsonBoundaryMethod])
 
+case class JsonHullResult(
+    totalReachable: Int,
+    notCovered:     Int
+)
+case class JsonBoundaryEdge(
+    caller:                  JsonMethod,
+    missedCallee:            JsonMethod,
+    tracesLeadingToBoundary: Seq[Seq[JsonMethod]],
+    staticCalleesAtSite:     Seq[JsonMethod],
+    impact:                  JsonHullResult
+)
+case class JsonBoundaryOutput(boundaries: Seq[JsonBoundaryEdge])
+
 
 object JsonFormats {
-    implicit val methodFormat: OFormat[JsonMethod] = Json.format[JsonMethod]
-    implicit val targetFormat: OFormat[JsonTarget] = Json.format[JsonTarget]
-    implicit val callSiteFormat: OFormat[JsonCallSite] = Json.format[JsonCallSite]
-    implicit val boundaryFormat: OFormat[JsonBoundaryMethod] = Json.format[JsonBoundaryMethod]
-    implicit val outputFormat: OFormat[JsonOutput] = Json.format[JsonOutput]
+    // ── existing ──────────────────────────────────────────────────────────────
+    implicit val methodFormat:      OFormat[JsonMethod]          = Json.format[JsonMethod]
+    implicit val targetFormat:      OFormat[JsonTarget]          = Json.format[JsonTarget]
+    implicit val callSiteFormat:    OFormat[JsonCallSite]        = Json.format[JsonCallSite]
+    implicit val boundaryFormat:    OFormat[JsonBoundaryMethod]  = Json.format[JsonBoundaryMethod]
+    implicit val outputFormat:      OFormat[JsonOutput]          = Json.format[JsonOutput]
+
+    // ── new ───────────────────────────────────────────────────────────────────
+    // ORDER MATTERS — hullResultFormat must come before boundaryEdgeFormat
+    implicit val hullResultFormat:     OFormat[JsonHullResult]     = Json.format[JsonHullResult]
+    implicit val boundaryEdgeFormat:   OFormat[JsonBoundaryEdge]   = Json.format[JsonBoundaryEdge]
+    implicit val boundaryOutputFormat: OFormat[JsonBoundaryOutput] = Json.format[JsonBoundaryOutput]
 }
