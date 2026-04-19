@@ -420,6 +420,8 @@ object CompareCGs {
                             JsonBoundaryEdge(
                                 caller                  = toJsonMethod(caller),
                                 missedCallee            = toJsonMethod(missedCallee),
+                                line                    = cs.line,
+                                pc                      = cs.pc,
                                 tracesLeadingToBoundary = traces,
                                 staticCalleesAtSite     = staticCallees,
                                 impact                  = JsonHullResult(reachable, notCovered)

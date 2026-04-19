@@ -34,6 +34,8 @@ case class JsonHullResult(
 case class JsonBoundaryEdge(
     caller:                  JsonMethod,
     missedCallee:            JsonMethod,
+    line:                    Int,
+    pc:                      Option[Int],
     tracesLeadingToBoundary: Seq[Seq[JsonMethod]],
     staticCalleesAtSite:     Seq[JsonMethod],
     impact:                  JsonHullResult
