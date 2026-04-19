@@ -154,21 +154,27 @@ object CompareCGs {
             // val boundaries2 = extractBoundaries(cg2, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
             // println(boundaries2.mkString(" ##### Boundary Methods - Input 2 #####\n\n\t", "\n\t", "\n\n"))
 
-            val mainMethod: Method = if (mainClass.nonEmpty) {
-                cg2.keys.find(m =>
-                    m.name == "main" &&
-                    m.declaringClass == mainClass &&
-                    m.parameterTypes == Seq("[Ljava/lang/String;")
+            val mainMethod: Method = {
+                val candidates = if (mainClass.nonEmpty) {
+                    cg2.keys.filter(m =>
+                        m.name == "main" &&
+                        m.declaringClass == mainClass &&
+                        m.parameterTypes == Seq("[Ljava/lang/String;")
+                    )
+                } else {
+                    cg2.keys.filter(m =>
+                        m.name == "main" &&
+                        m.parameterTypes == Seq("[Ljava/lang/String;")
+                    )
+                }
+                
+                candidates.headOption.getOrElse(
+                    throw new IllegalStateException(
+                        if (mainClass.nonEmpty) s"No main method found in class $mainClass"
+                        else "No main method found in dynamic CG"
+                    )
                 )
-            } else {
-                cg2.keys.find(m =>
-                    m.name == "main" &&
-                    m.parameterTypes == Seq("[Ljava/lang/String;")
-                )
-            }.getOrElse(throw new IllegalStateException(
-                if (mainClass.nonEmpty) s"No main method found in class $mainClass"
-                else "No main method found in dynamic CG"
-            ))
+            }
 
             val jsonOutput = extractBoundaries(
                 dynamicCG              = cg2,   
@@ -177,7 +183,7 @@ object CompareCGs {
                 inPackage              = inPackage,
                 mainMethod             = mainMethod
             )
-            
+
             if (outputPath.nonEmpty)
                 Files.write(Paths.get(s"$outputPath/boundaries.json"), Json.prettyPrint(jsonOutput).getBytes(StandardCharsets.UTF_8))
             else
