@@ -154,7 +154,7 @@ object CompareCGs {
             // val boundaries2 = extractBoundaries(cg2, commonReachableMethods, inPackage).asScala.toSeq.sortBy(_.m.declaringClass).take(maxFindings)
             // println(boundaries2.mkString(" ##### Boundary Methods - Input 2 #####\n\n\t", "\n\t", "\n\n"))
 
-            val mainMethod = if (mainClass.nonEmpty) {
+            val mainMethod: Method = if (mainClass.nonEmpty) {
                 cg2.keys.find(m =>
                     m.name == "main" &&
                     m.declaringClass == mainClass &&
@@ -177,6 +177,7 @@ object CompareCGs {
                 inPackage              = inPackage,
                 mainMethod             = mainMethod
             )
+            
             if (outputPath.nonEmpty)
                 Files.write(Paths.get(s"$outputPath/boundaries.json"), Json.prettyPrint(jsonOutput).getBytes(StandardCharsets.UTF_8))
             else
