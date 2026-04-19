@@ -155,10 +155,12 @@ object CompareCGs {
             // println(boundaries2.mkString(" ##### Boundary Methods - Input 2 #####\n\n\t", "\n\t", "\n\n"))
 
             val mainMethod: Method = {
-                val candidates = if (mainClass.nonEmpty) {
+                val mainClassDescriptor = if (mainClass.nonEmpty) toJVMDescriptor(mainClass) else ""
+                
+                val candidates = if (mainClassDescriptor.nonEmpty) {
                     cg2.keys.filter(m =>
                         m.name == "main" &&
-                        m.declaringClass == mainClass &&
+                        m.declaringClass == mainClassDescriptor &&
                         m.parameterTypes == Seq("[Ljava/lang/String;")
                     )
                 } else {
@@ -170,7 +172,7 @@ object CompareCGs {
                 
                 candidates.headOption.getOrElse(
                     throw new IllegalStateException(
-                        if (mainClass.nonEmpty) s"No main method found in class $mainClass"
+                        if (mainClassDescriptor.nonEmpty) s"No main method found in class $mainClass"
                         else "No main method found in dynamic CG"
                     )
                 )
@@ -213,6 +215,10 @@ object CompareCGs {
         }
 
         //println(sites.toSeq.sortBy(_._3).takeRight(100).mkString(" #### Impactful Call Sites ####\n\n\t", "\n\t", "\n\n"))
+    }
+
+    private def toJVMDescriptor(className: String): String = {
+        s"L${className.replace('.', '/')};"
     }
 
     private def edgeCount(cg: Map[Method, Set[CallSite]], inPackage: String): Int = {
