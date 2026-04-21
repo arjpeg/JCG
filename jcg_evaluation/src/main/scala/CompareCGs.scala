@@ -395,37 +395,42 @@ object CompareCGs {
         val boundaries = dynamicCG.keys
             .filter(m => commonReachableMethods.contains(m) && m.declaringClass.startsWith(inPackage))
             .flatMap { caller =>
-                dynamicCG(caller).flatMap { cs =>
-                    cs.targets.collect {
-                        case missedCallee if !commonReachableMethods.contains(missedCallee) =>
+                dynamicCG(caller).flatMap { dynamicCS =>
+                    
+                    // Find the matching static call site (same pc and line)
+                    val staticCS = staticCG
+                        .getOrElse(caller, Set.empty)
+                        .find(scs => scs.pc == dynamicCS.pc && scs.line == dynamicCS.line)
+                    
+                    // Get static targets at this call site (empty if site doesn't exist)
+                    val staticTargets = staticCS.map(_.targets).getOrElse(Set.empty)
+                    
+                    // Find callees in dynamic that are NOT in static at this exact site
+                    val missedCallees = dynamicCS.targets.diff(staticTargets)
+                    
+                    missedCallees.map { missedCallee =>
+                        val traces = findAllPathsFromMain(
+                            target     = caller,
+                            mainMethod = mainMethod,
+                            reverseMap = reverseMap
+                        ).map(_.map(toJsonMethod))
 
-                            val traces = findAllPathsFromMain(
-                                target     = caller,
-                                mainMethod = mainMethod,
-                                reverseMap = reverseMap
-                            ).map(_.map(toJsonMethod))
+                        val staticCallees = staticTargets.toSeq.map(toJsonMethod)
 
-                            val staticCallees = staticCG
-                                .getOrElse(caller, Set.empty)
-                                .find(staticCS => staticCS.pc == cs.pc && staticCS.line == cs.line)
-                                .map(_.targets.toSeq)
-                                .getOrElse(Seq.empty)
-                                .map(toJsonMethod)
+                        val (reachable, notCovered) = hullCache.getOrElseUpdate(
+                            missedCallee,
+                            transitiveHull(missedCallee, dynamicCG, commonReachableMethods)
+                        )
 
-                            val (reachable, notCovered) = hullCache.getOrElseUpdate(
-                                missedCallee,
-                                transitiveHull(missedCallee, dynamicCG, commonReachableMethods)
-                            )
-
-                            JsonBoundaryEdge(
-                                caller                  = toJsonMethod(caller),
-                                missedCallee            = toJsonMethod(missedCallee),
-                                line                    = cs.line,
-                                pc                      = cs.pc,
-                                tracesLeadingToBoundary = traces,
-                                staticCalleesAtSite     = staticCallees,
-                                impact                  = JsonHullResult(reachable, notCovered)
-                            )
+                        JsonBoundaryEdge(
+                            caller                  = toJsonMethod(caller),
+                            missedCallee            = toJsonMethod(missedCallee),
+                            line                    = dynamicCS.line,
+                            pc                      = dynamicCS.pc,
+                            tracesLeadingToBoundary = traces,
+                            staticCalleesAtSite     = staticCallees,
+                            impact                  = JsonHullResult(reachable, notCovered)
+                        )
                     }
                 }
             }.toSeq
