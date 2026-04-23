@@ -358,17 +358,22 @@ object CompareCGs {
         mainMethod: Method,
         reverseMap: Map[Method, Set[Method]],
         maxPaths:   Int = 5,
-        maxDepth:   Int = 15
+        maxDepth:   Int = 15,
+        windowSize: Int = 15
     ): Seq[Seq[Method]] = {
         val results = mutable.ArrayBuffer.empty[Seq[Method]]
 
         def dfs(current: Method, pathSoFar: Seq[Method], visited: Set[Method]): Unit = {
             if (results.size >= maxPaths) return
             if (pathSoFar.length > maxDepth) return
+            
             if (current == mainMethod) {
-                results += pathSoFar.reverse
+                // Take only the last windowSize methods (closest to target)
+                val windowedPath = pathSoFar.reverse.takeRight(windowSize)
+                results += windowedPath
                 return
             }
+            
             reverseMap.get(current).foreach { callers =>
                 callers.foreach { caller =>
                     if (!visited.contains(caller))
