@@ -78,6 +78,7 @@ lazy val jcg_soot_testadapter = project.settings(
     name := "JCG Soot Test Adapter",
     resolvers += Resolver.mavenLocal,
     libraryDependencies += "org.soot-oss" % "soot" % "4.4.1",
+    libraryDependencies += "com.google.guava" % "guava" % "27.0.1-jre",
     libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
     aggregate in assembly := false,
     publishArtifact := false
