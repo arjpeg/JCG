@@ -62,11 +62,21 @@ lazy val jcg_wala_testadapter = project.settings(
     publishArtifact := false
 ).dependsOn(jcg_testadapter_commons)
 
+// lazy val jcg_soot_testadapter = project.settings(
+//     commonSettings,
+//     name := "JCG Soot Test Adapter",
+//     resolvers += "soot snapshot" at "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/",
+//     resolvers += "soot release" at "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/",
+//     libraryDependencies += "org.soot-oss" % "soot" % "4.4.1",
+//     libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
+//     aggregate in assembly := false,
+//     publishArtifact := false
+// ).dependsOn(jcg_testadapter_commons)
+
 lazy val jcg_soot_testadapter = project.settings(
     commonSettings,
     name := "JCG Soot Test Adapter",
-    resolvers += "soot snapshot" at "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/",
-    resolvers += "soot release" at "https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/",
+    resolvers += Resolver.mavenLocal,
     libraryDependencies += "org.soot-oss" % "soot" % "4.4.1",
     libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
     aggregate in assembly := false,
