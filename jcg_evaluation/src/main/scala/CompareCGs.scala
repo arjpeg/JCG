@@ -407,21 +407,36 @@ object CompareCGs {
                     //     .getOrElse(caller, Set.empty)
                     //     .find(scs => scs.pc == dynamicCS.pc && scs.line == dynamicCS.line)
 
-                    val staticCS = staticCG
-                        .getOrElse(caller, Set.empty)
-                        .find { scs =>
-                            if (dynamicCS.pc.isDefined && scs.pc.isDefined)
-                                scs.pc == dynamicCS.pc && scs.line == dynamicCS.line
-                            else
-                                scs.line == dynamicCS.line
+                    val staticCSCandidates = staticCG.getOrElse(caller, Set.empty)
+                    val staticCS = staticCSCandidates.find { scs =>
+                        if (dynamicCS.pc.isDefined && scs.pc.isDefined)
+                            scs.pc == dynamicCS.pc && scs.line == dynamicCS.line
+                        else {
+                            println(s"[DEBUG] Falling back to line-only match for caller=$caller")
+                            println(s"  dynamic: line=${dynamicCS.line}, pc=${dynamicCS.pc}")
+                            println(s"  static candidate: line=${scs.line}, pc=${scs.pc}")
+                            println(s"  line match: ${scs.line == dynamicCS.line}")
+                            scs.line == dynamicCS.line
                         }
-                    
+                    }
+
+                    println(s"[DEBUG] Caller: $caller")
+                    println(s"  Dynamic CS: line=${dynamicCS.line}, pc=${dynamicCS.pc}, targets=${dynamicCS.targets.mkString("{", ", ", "}")}")
+                    println(s"  Static candidates: ${staticCSCandidates.map(s => s"line=${s.line} pc=${s.pc} targets=${s.targets.size}").mkString("[", ", ", "]")}")
+                    println(s"  StaticCS found: $staticCS")
+
                     // Get static targets at this call site (empty if site doesn't exist)
                     val staticTargets = staticCS.map(_.targets).getOrElse(Set.empty)
-                    
+
                     // Find callees in dynamic that are NOT in static at this exact site
                     val missedCallees = dynamicCS.targets.diff(staticTargets)
-                    
+
+                    if (missedCallees.nonEmpty) {
+                        println(s"[DEBUG] Missed callees for caller=$caller at line=${dynamicCS.line}:")
+                        println(s"  staticTargets: ${staticTargets.mkString("{", ", ", "}")}")
+                        println(s"  missedCallees: ${missedCallees.mkString("{", ", ", "}")}")
+                    }
+
                     missedCallees.map { missedCallee =>
                         val traces = findAllPathsFromMain(
                             target     = caller,
