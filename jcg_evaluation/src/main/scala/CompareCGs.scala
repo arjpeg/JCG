@@ -403,9 +403,18 @@ object CompareCGs {
                 dynamicCG(caller).flatMap { dynamicCS =>
                     
                     // Find the matching static call site (same pc and line)
+                    // val staticCS = staticCG
+                    //     .getOrElse(caller, Set.empty)
+                    //     .find(scs => scs.pc == dynamicCS.pc && scs.line == dynamicCS.line)
+
                     val staticCS = staticCG
                         .getOrElse(caller, Set.empty)
-                        .find(scs => scs.pc == dynamicCS.pc && scs.line == dynamicCS.line)
+                        .find { scs =>
+                            if (dynamicCS.pc.isDefined && scs.pc.isDefined)
+                                scs.pc == dynamicCS.pc && scs.line == dynamicCS.line
+                            else
+                                scs.line == dynamicCS.line
+                        }
                     
                     // Get static targets at this call site (empty if site doesn't exist)
                     val staticTargets = staticCS.map(_.targets).getOrElse(Set.empty)
